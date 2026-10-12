@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RFQ Quick-Quote Builder</title>
+<style>
+:root{
+  --bg:#171c22; --bg2:#1d242c; --card:#232c36; --card2:#2a3541; --line:#35424f;
+  --text:#e8ecf0; --muted:#98a6b4; --orange:#ff6b1a; --orange-d:#e25a0e; --steel:#5b9bd0;
+  --ok:#52c28a; --radius:10px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-text-size-adjust:100%}
+button,input,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+
+/* header */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--line);border-top:4px solid var(--orange)}
+.topbar .wrap{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between;padding-top:16px;padding-bottom:16px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:40px;height:40px;border-radius:8px;background:var(--orange);display:grid;place-items:center}
+.brand h1{font-size:19px;margin:0;letter-spacing:.2px}
+.brand p{margin:0;color:var(--muted);font-size:13px}
+.actions{display:flex;flex-wrap:wrap;gap:10px}
+.btn{border:1px solid var(--line);background:var(--card2);padding:10px 16px;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;transition:.15s;min-height:42px}
+.btn:hover{border-color:var(--steel);background:#31404e}
+.btn:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--orange);outline-offset:1px}
+.btn.primary{background:var(--orange);border-color:var(--orange);color:#1a0d02}
+.btn.primary:hover{background:var(--orange-d);border-color:var(--orange-d)}
+.btn.ghost{background:transparent}
+.btn.small{padding:6px 12px;min-height:34px;font-size:13px}
+
+/* examples strip */
+.examples{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:18px 0 4px}
+.examples span{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.chip{border:1px solid var(--steel);color:var(--steel);background:transparent;padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:600;font-size:13.5px}
+.chip:hover{background:var(--steel);color:#0e1a25}
+
+/* layout */
+.grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:24px;padding:20px 0 90px;align-items:start}
+.col{display:flex;flex-direction:column;gap:24px}
+.sticky{position:sticky;top:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:24px}
+.card h2{margin:0 0 4px;font-size:16px;text-transform:uppercase;letter-spacing:.09em;display:flex;align-items:center;gap:10px}
+.card h2::before{content:"";width:4px;height:16px;background:var(--orange);border-radius:2px}
+.card .sub{margin:0 0 18px;color:var(--muted);font-size:13.5px}
+.fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.fields .full{grid-column:1/-1}
+.field label,.lbl{display:block;font-size:12.5px;font-weight:600;color:var(--muted);margin-bottom:6px;letter-spacing:.03em}
+input[type=text],input[type=number],input[type=email],input[type=tel],select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:42px}
+textarea{resize:vertical;min-height:70px}
+input:disabled{opacity:.4}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 18px,calc(100% - 13px) 18px;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px}
+.unit{position:relative}
+.unit input{padding-right:52px}
+.unit i{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-style:normal;color:var(--muted);font-size:12.5px;pointer-events:none}
+.hint{font-size:12px;color:var(--muted);margin-top:5px}
+
+/* ops */
+.ops-head,.op{display:grid;grid-template-columns:minmax(0,1.6fr) 96px 96px 90px;gap:10px;align-items:center}
+.ops-head{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;padding:0 12px 8px}
+.op{padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:var(--bg2);transition:.15s}
+.op.on{border-color:var(--orange);background:#2b2723}
+.op .name{display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:600}
+.op .name input{width:20px;height:20px;accent-color:var(--orange);flex:none}
+.op .tag{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:4px;background:#34506a;color:#b9d9f2}
+.op .tag.f{background:#5a3a22;color:#ffc9a3}
+.op .cost{text-align:right;font-family:var(--mono);font-size:14px}
+.op .mini{display:none;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.op input[type=number]{padding:8px 10px;min-height:38px}
+
+/* settings */
+.range-row{display:flex;gap:14px;align-items:center}
+input[type=range]{flex:1;accent-color:var(--orange);height:28px}
+.range-val{font-family:var(--mono);font-weight:700;min-width:56px;text-align:right;color:var(--orange);font-size:17px}
+.divider{height:1px;background:var(--line);margin:20px 0}
+.settings-note{font-size:12.5px;color:var(--muted);margin:14px 0 0;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* quote output */
+.quote-head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.qmeta{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.qmeta b{color:var(--text)}
+.lines{margin:0;padding:0;list-style:none}
+.lines li{display:flex;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+.lines li span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.lines li small{color:var(--muted);display:block;font-size:12px}
+.lines li.sum{font-weight:700}
+.total{margin-top:18px;background:linear-gradient(135deg,#ff6b1a,#e25a0e);color:#1a0d02;border-radius:10px;padding:18px 20px;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.total .l{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.1em}
+.total .v{font-family:var(--mono);font-size:32px;font-weight:800;line-height:1.1}
+.total .pp{text-align:right}
+.total .pp .v{font-size:22px}
+.break{margin-top:24px}
+.break h3{font-size:13px;text-transform:uppercase;letter-spacing:.09em;color:var(--steel);margin:0 0 10px}
+.tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table.bt{width:100%;border-collapse:collapse;font-size:13.5px;min-width:480px}
+table.bt th,table.bt td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+table.bt th:first-child,table.bt td:first-child{text-align:left}
+table.bt th{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;background:var(--bg2)}
+table.bt td{font-family:var(--mono)}
+table.bt td:first-child{font-family:var(--font);font-weight:700}
+table.bt tr:last-child td{border-bottom:0}
+table.bt tr.cur td{background:#2b2723}
+table.bt td.pp{color:var(--orange);font-weight:700}
+.dl{margin-top:20px;width:100%;font-size:15px;padding:14px}
+.fine{font-size:12px;color:var(--muted);margin:10px 0 0;text-align:center}
+
+/* toast + mobile bar */
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%) translateY(20px);background:#0e1216;border:1px solid var(--orange);color:var(--text);padding:12px 18px;border-radius:8px;opacity:0;pointer-events:none;transition:.25s;z-index:30;max-width:90vw;font-size:14px}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.mbar{display:none}
+
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:12.5px;padding:20px 0 100px}
+
+/* print doc hidden on screen */
+#printDoc{display:none}
+
+@media (max-width:980px){
+  .grid{grid-template-columns:1fr}
+  .sticky{position:static}
+}
+@media (max-width:640px){
+  .wrap{padding:0 14px}
+  .card{padding:18px}
+  .fields{grid-template-columns:1fr}
+  .ops-head{display:none}
+  .op{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .op .name{grid-column:1/-1}
+  .op .mini{display:block}
+  .op .cost{text-align:left;padding-top:2px}
+  .actions{width:100%}
+  .actions .btn{flex:1 1 auto}
+  .total .v{font-size:27px}
+  .mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bg2);border-top:2px solid var(--orange);padding:10px 14px;justify-content:space-between;align-items:center;gap:10px}
+  .mbar .t{font-family:var(--mono);font-weight:800;font-size:19px}
+  .mbar .p{font-size:12px;color:var(--muted)}
+}
+
+/* ---------- PRINT ---------- */
+@media print{
+  @page{size:Letter;margin:.5in}
+  html,body{background:#fff!important;color:#111!important}
+  body>*:not(#printDoc){display:none!important}
+  #printDoc{display:block;font-family:var(--font);font-size:10.5pt;color:#111;line-height:1.4}
+  .pd-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #ff6b1a;padding-bottom:12px;margin-bottom:16px}
+  .pd-shop h1{margin:0 0 4px;font-size:20pt;letter-spacing:.2px}
+  .pd-shop div{font-size:9.5pt;color:#444}
+  .pd-qt{text-align:right}
+  .pd-qt h2{margin:0 0 4px;font-size:16pt;letter-spacing:.14em;color:#ff6b1a}
+  .pd-qt div{font-size:9.5pt}
+  .pd-info{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+  .pd-box{border:1px solid #bbb;border-radius:4px;padding:10px 12px}
+  .pd-box h3{margin:0 0 6px;font-size:8.5pt;letter-spacing:.1em;text-transform:uppercase;color:#555}
+  .pd-box p{margin:2px 0}
+  #printDoc table{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:10pt}
+  #printDoc th{background:#222;color:#fff;text-align:left;padding:6px 8px;font-size:8.5pt;letter-spacing:.06em;text-transform:uppercase;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #printDoc td{padding:6px 8px;border-bottom:1px solid #ccc}
+  #printDoc .r{text-align:right}
+  #printDoc tr.tot td{border-top:2px solid #111;font-weight:700;font-size:11.5pt;border-bottom:0}
+  .pd-h{font-size:9pt;letter-spacing:.1em;text-transform:uppercase;font-weight:700;margin:0 0 6px;color:#333}
+  .pd-terms{border-top:1px solid #bbb;padding-top:10px;font-size:9pt;color:#333}
+  .pd-terms p{margin:3px 0}
+  .pd-sign{display:flex;gap:30px;margin-top:26px;font-size:9pt;color:#333}
+  .pd-sign div{flex:1;border-top:1px solid #111;padding-top:4px}
+  .toast,.mbar{display:none!important}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1a0d02" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1"/></svg>
+      </div>
+      <div>
+        <h1>RFQ Quick-Quote Builder</h1>
+        <p>Turn a request for quote into a priced, printable quote.</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btnNew" type="button">Start new quote</button>
+      <button class="btn primary" id="btnPdfTop" type="button">Download PDF quote</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="examples">
+    <span>Example RFQs</span>
+    <button class="chip" id="exA" type="button">100 pcs 6061 aluminum brackets</button>
+    <button class="chip" id="exB" type="button">25 pcs 4140 steel shafts</button>
+  </div>
+
+  <div class="grid">
+    <div class="col">
+      <section class="card" aria-labelledby="h-rfq">
+        <h2 id="h-rfq">RFQ details</h2>
+        <p class="sub">Who is asking, what they need, and how many.</p>
+        <div class="fields">
+          <div class="field"><label for="customer">Customer name</label><input id="customer" type="text" autocomplete="off"></div>
+          <div class="field"><label for="part">Part name / description</label><input id="part" type="text" autocomplete="off"></div>
+          <div class="field"><label for="material">Material</label><select id="material"></select></div>
+          <div class="field"><label for="price">Material price</label><div class="unit"><input id="price" type="number" inputmode="decimal" min="0" step="0.01"><i>$/lb</i></div></div>
+          <div class="field"><label for="qty">Quantity</label><div class="unit"><input id="qty" type="number" inputmode="numeric" min="0" step="1"><i>pcs</i></div></div>
+          <div class="field"><label for="weight">Stock weight per part</label><div class="unit"><input id="weight" type="number" inputmode="decimal" min="0" step="0.01"><i>lb</i></div><div class="hint">Raw stock weight including cut-off, per piece.</div></div>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="h-ops">
+        <h2 id="h-ops">Operations</h2>
+        <p class="sub">Check each operation the job needs. Setup is charged once per lot; run time is charged per part.</p>
+        <div class="ops-head"><span>Operation</span><span>Setup min</span><span>Run min/pc</span><span style="text-align:right">Cost</span></div>
+        <div id="ops"></div>
+      </section>
+
+      <section class="card" aria-labelledby="h-set">
+        <h2 id="h-set">Shop settings</h2>
+        <p class="sub">Saved in this browser and reused on every quote.</p>
+        <div class="fields">
+          <div class="field"><label for="shopRate">Shop rate (machining)</label><div class="unit"><input id="shopRate" type="number" inputmode="decimal" min="0" step="1"><i>$/hr</i></div></div>
+          <div class="field"><label for="finRate">Finishing rate (anodize, coat, heat treat)</label><div class="unit"><input id="finRate" type="number" inputmode="decimal" min="0" step="1"><i>$/hr</i></div></div>
+          <div class="field"><label for="markup">Material markup</label><div class="unit"><input id="markup" type="number" inputmode="decimal" min="0" step="1"><i>%</i></div></div>
+          <div class="field"><span class="lbl">Overhead &amp; profit margin (on cost)</span>
+            <div class="range-row"><input id="margin" type="range" min="0" max="60" step="1" aria-label="Overhead and profit margin percent"><span class="range-val" id="marginVal">0%</span></div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <span class="lbl">Quote header &amp; terms (printed on the PDF)</span>
+        <div class="fields" style="margin-top:8px">
+          <div class="field full"><label for="coName">Shop name</label><input id="coName" type="text" autocomplete="organization"></div>
+          <div class="field"><label for="coPhone">Phone</label><input id="coPhone" type="tel" autocomplete="tel"></div>
+          <div class="field"><label for="coEmail">Email</label><input id="coEmail" type="email" autocomplete="email"></div>
+          <div class="field full"><label for="coAddr">Address</label><input id="coAddr" type="text" autocomplete="street-address"></div>
+          <div class="field full"><label for="coTerms">Terms</label><textarea id="coTerms"></textarea></div>
+        </div>
+        <div class="settings-note"><span>Material $/lb edits are saved per material.</span><button class="btn small ghost" id="btnReset" type="button">Restore shop defaults</button></div>
+      </section>
+    </div>
+
+    <div class="col sticky" id="quoteCol">
+      <section class="card" aria-labelledby="h-q" aria-live="polite">
+        <h2 id="h-q">Live quote</h2>
+        <div class="quote-head">
+          <div class="qmeta">Quote <b id="qNum"></b><br><span id="qDate"></span></div>
+          <div class="qmeta" style="text-align:right"><b id="qQtyLbl"></b><br><span id="qCust"></span></div>
+        </div>
+        <ul class="lines">
+          <li><span>Material<small id="lnMatSub"></small></span><span id="lnMat"></span></li>
+          <li><span>Machining<small id="lnMachSub"></small></span><span id="lnMach"></span></li>
+          <li><span>Finishing<small id="lnFinSub"></small></span><span id="lnFin"></span></li>
+          <li class="sum"><span>Subtotal</span><span id="lnSub"></span></li>
+          <li><span>Overhead &amp; profit<small id="lnMarSub"></small></span><span id="lnMar"></span></li>
+        </ul>
+        <div class="total">
+          <div><div class="l">Quote total</div><div class="v" id="lnTotal"></div></div>
+          <div class="pp"><div class="l">Per part</div><div class="v" id="lnPer"></div></div>
+        </div>
+
+        <div class="break">
+          <h3>Quantity breaks</h3>
+          <div class="tbl-scroll">
+            <table class="bt">
+              <thead><tr><th>Qty</th><th>Material</th><th>Machining</th><th>Finishing</th><th>Margin</th><th>Total</th><th>Per part</th></tr></thead>
+              <tbody id="breakBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <button class="btn primary dl" id="btnPdf" type="button">Download PDF quote</button>
+        <p class="fine">Opens a one-page quote. Choose “Save as PDF” in the print dialog.</p>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer><div class="wrap">RFQ Quick-Quote Builder · Single-quote sample. Shop settings stay on this device; nothing is sent anywhere.</div></footer>
+
+<div class="mbar"><div><div class="t" id="mTotal"></div><div class="p" id="mPer"></div></div><a class="btn primary" href="#quoteCol" style="text-decoration:none;display:inline-flex;align-items:center">View quote</a></div>
+<div class="toast" id="toast" role="status"></div>
+<div id="printDoc" aria-hidden="true"></div>
+
+<script>
+(function(){
+'use strict';
+
+var $ = function(id){ return document.getElementById(id); };
+var money = new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'});
+function r2(x){ return Math.round((x + 1e-9) * 100) / 100; }
+function num(v){ var n = parseFloat(v); return isFinite(n) && n > 0 ? n : 0; }
+function esc(s){ return String(s).replace(/[&<>"']/g,function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function fmtMin(m){ return (Math.round(m * 10) / 10).toString(); }
+
+var MATERIALS = [
+  {id:'6061', name:'6061 Aluminum', price:3.25},
+  {id:'7075', name:'7075 Aluminum', price:5.10},
+  {id:'1018', name:'1018 Steel', price:1.45},
+  {id:'4140', name:'4140 Steel', price:2.10},
+  {id:'303', name:'303 Stainless', price:4.60},
+  {id:'304', name:'304 Stainless', price:3.90},
+  {id:'316', name:'316 Stainless', price:5.40},
+  {id:'delrin', name:'Delrin (acetal)', price:4.80},
+  {id:'brass', name:'Brass (360)', price:7.20}
+];
+var OPS = [
+  {id:'saw', name:'Saw cut', cat:'m'},
+  {id:'mill', name:'CNC mill', cat:'m'},
+  {id:'lathe', name:'CNC lathe', cat:'m'},
+  {id:'drill', name:'Drilling / tapping', cat:'m'},
+  {id:'deburr', name:'Deburr', cat:'m'},
+  {id:'anodize', name:'Anodize', cat:'f'},
+  {id:'powder', name:'Powder coat', cat:'f'},
+  {id:'heat', name:'Heat treat', cat:'f'},
+  {id:'grind', name:'Grinding', cat:'m'},
+  {id:'inspect', name:'Inspection / CMM', cat:'m'}
+];
+var EXAMPLES = {
+  a:{customer:'Cascade Robotics', part:'Motor mount bracket, P/N CR-2210-B', material:'6061', qty:100, weight:0.62,
+     ops:{mill:{setup:45,run:6.5}, drill:{setup:20,run:2.5}, deburr:{setup:5,run:1.2}}},
+  b:{customer:'Ridgeline Hydraulics', part:'Drive shaft, 1.5 in dia x 8 in, P/N RH-4471', material:'4140', qty:25, weight:4.1,
+     ops:{lathe:{setup:60,run:14}, grind:{setup:45,run:9}}}
+};
+var DEFAULT_SETTINGS = {
+  shopRate:85, finRate:60, markup:15, margin:20,
+  company:{name:'Ridgeway Precision Machining', phone:'(614) 555-0142', email:'quotes@ridgewaymachining.com', addr:'2140 Industrial Parkway, Columbus, OH 43228'},
+  terms:'Net 30 days. Prices in USD, FOB our shop. Raw material pricing is subject to change before order release. Tolerances per customer drawing; ±0.005 in where not specified.',
+  prices:{}
+};
+
+/* ---------- storage ---------- */
+var KEY = 'rfqQuoteBuilder.settings.v1', SEQ = 'rfqQuoteBuilder.seq.v1';
+function clone(o){ return JSON.parse(JSON.stringify(o)); }
+function loadSettings(){
+  var s = clone(DEFAULT_SETTINGS);
+  MATERIALS.forEach(function(m){ s.prices[m.id] = m.price; });
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(raw){
+      var p = JSON.parse(raw);
+      ['shopRate','finRate','markup','margin'].forEach(function(k){ if(typeof p[k] === 'number') s[k] = p[k]; });
+      if(p.company){ Object.keys(s.company).forEach(function(k){ if(typeof p.company[k] === 'string') s.company[k] = p.company[k]; }); }
+      if(typeof p.terms === 'string') s.terms = p.terms;
+      if(p.prices){ MATERIALS.forEach(function(m){ if(typeof p.prices[m.id] === 'number') s.prices[m.id] = p.prices[m.id]; }); }
+    }
+  }catch(e){}
+  return s;
+}
+function saveSettings(){ try{ localStorage.setItem(KEY, JSON.stringify(settings)); }catch(e){} }
+function nextQuoteNumber(){
+  var n = 1041;
+  try{ n = parseInt(localStorage.getItem(SEQ),10) || 1041; n += 1; localStorage.setItem(SEQ, String(n)); }catch(e){ n += Math.floor(Math.random()*50) + 1; }
+  return 'Q-' + new Date().getFullYear() + '-' + String(n).padStart(4,'0');
+}
+
+/* ---------- state ---------- */
+var settings = loadSettings();
+var rfq;
+function blankRfq(){
+  var ops = {};
+  OPS.forEach(function(o){ ops[o.id] = {on:false, setup:0, run:0}; });
+  return {customer:'', part:'', material:'6061', qty:0, weight:0, ops:ops, number:nextQuoteNumber(), date:new Date()};
+}
+function fromExample(ex){
+  var r = blankRfq();
+  r.customer = ex.customer; r.part = ex.part; r.material = ex.material; r.qty = ex.qty; r.weight = ex.weight;
+  Object.keys(ex.ops).forEach(function(k){ r.ops[k] = {on:true, setup:ex.ops[k].setup, run:ex.ops[k].run}; });
+  return r;
+}
+
+/* ---------- calc ---------- */
+function calc(qty){
+  var mat = qty > 0 ? r2(qty * rfq.weight * settings.prices[rfq.material] * (1 + settings.markup/100)) : 0;
+  var mach = 0, fin = 0, per = {};
+  OPS.forEach(function(o){
+    var st = rfq.ops[o.id], c = 0;
+    if(st.on && qty > 0){
+      var rate = o.cat === 'f' ? settings.finRate : settings.shopRate;
+      c = r2((st.setup/60 + st.run * qty/60) * rate);
+    }
+    per[o.id] = c;
+    if(o.cat === 'f') fin += c; else mach += c;
+  });
+  mach = r2(mach); fin = r2(fin);
+  var sub = r2(mat + mach + fin);
+  var mar = r2(sub * settings.margin/100);
+  var total = r2(sub + mar);
+  return {qty:qty, mat:mat, mach:mach, fin:fin, sub:sub, mar:mar, total:total, per:qty > 0 ? total/qty : 0, opCost:per};
+}
+
+/* ---------- build UI ---------- */
+function buildStatic(){
+  $('material').innerHTML = MATERIALS.map(function(m){ return '<option value="'+m.id+'">'+esc(m.name)+'</option>'; }).join('');
+  $('ops').innerHTML = OPS.map(function(o){
+    return '<div class="op" id="op-'+o.id+'">' +
+      '<label class="name"><input type="checkbox" data-op="'+o.id+'" data-f="on"><span>'+esc(o.name)+'</span><span class="tag '+o.cat+'">'+(o.cat==='f'?'Finishing':'Machining')+'</span></label>' +
+      '<div><span class="mini">Setup min</span><input type="number" inputmode="decimal" min="0" step="1" placeholder="0" aria-label="'+esc(o.name)+' setup minutes" data-op="'+o.id+'" data-f="setup"></div>' +
+      '<div><span class="mini">Run min/pc</span><input type="number" inputmode="decimal" min="0" step="0.1" placeholder="0" aria-label="'+esc(o.name)+' run minutes per part" data-op="'+o.id+'" data-f="run"></div>' +
+      '<div><span class="mini">Cost</span><div class="cost" id="oc-'+o.id+'"></div></div>' +
+    '</div>';
+  }).join('');
+}
+function syncForm(){
+  $('customer').value = rfq.customer;
+  $('part').value = rfq.part;
+  $('material').value = rfq.material;
+  $('price').value = settings.prices[rfq.material];
+  $('qty').value = rfq.qty || '';
+  $('weight').value = rfq.weight || '';
+  OPS.forEach(function(o){
+    var st = rfq.ops[o.id], row = $('op-'+o.id);
+    row.querySelector('[data-f=on]').checked = st.on;
+    row.querySelector('[data-f=setup]').value = st.setup || '';
+    row.querySelector('[data-f=run]').value = st.run || '';
+  });
+}
+function syncSettings(){
+  $('shopRate').value = settings.shopRate;
+  $('finRate').value = settings.finRate;
+  $('markup').value = settings.markup;
+  $('margin').value = settings.margin;
+  $('coName').value = settings.company.name;
+  $('coPhone').value = settings.company.phone;
+  $('coEmail').value = settings.company.email;
+  $('coAddr').value = settings.company.addr;
+  $('coTerms').value = settings.terms;
+}
+
+/* ---------- render ---------- */
+function longDate(d){ return d.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}); }
+function render(){
+  var qty = rfq.qty, c = calc(qty);
+  var mat = MATERIALS.filter(function(m){ return m.id === rfq.material; })[0];
+  var rate = settings.shopRate;
+
+  OPS.forEach(function(o){
+    var row = $('op-'+o.id), st = rfq.ops[o.id];
+    row.classList.toggle('on', st.on);
+    row.querySelector('[data-f=setup]').disabled = !st.on;
+    row.querySelector('[data-f=run]').disabled = !st.on;
+    $('oc-'+o.id).textContent = st.on && qty > 0 ? money.format(c.opCost[o.id]) : '—';
+  });
+
+  $('qNum').textContent = rfq.number;
+  $('qDate').textContent = longDate(rfq.date);
+  $('qQtyLbl').textContent = qty > 0 ? qty + ' pcs · ' + mat.name : mat.name;
+  $('qCust').textContent = rfq.customer || 'Customer not entered';
+  $('lnMat').textContent = money.format(c.mat);
+  $('lnMatSub').textContent = qty > 0 && rfq.weight > 0 ? (qty*rfq.weight).toFixed(1) + ' lb at ' + money.format(settings.prices[rfq.material]) + '/lb + ' + settings.markup + '% markup' : 'Enter quantity and stock weight';
+  $('lnMach').textContent = money.format(c.mach);
+  $('lnFin').textContent = money.format(c.fin);
+  var mOps = OPS.filter(function(o){ return o.cat==='m' && rfq.ops[o.id].on; }).length;
+  var fOps = OPS.filter(function(o){ return o.cat==='f' && rfq.ops[o.id].on; }).length;
+  $('lnMachSub').textContent = mOps + (mOps === 1 ? ' operation' : ' operations') + ' at ' + money.format(rate) + '/hr';
+  $('lnFinSub').textContent = fOps + (fOps === 1 ? ' operation' : ' operations') + ' at ' + money.format(settings.finRate) + '/hr';
+  $('lnSub').textContent = money.format(c.sub);
+  $('lnMar').textContent = money.format(c.mar);
+  $('lnMarSub').textContent = settings.margin + '% on cost';
+  $('lnTotal').textContent = money.format(c.total);
+  $('lnPer').textContent = qty > 0 ? money.format(c.per) : '—';
+  $('marginVal').textContent = settings.margin + '%';
+  $('mTotal').textContent = money.format(c.total);
+  $('mPer').textContent = qty > 0 ? money.format(c.per) + ' per part · ' + qty + ' pcs' : 'Enter a quantity';
+
+  var rows = [1,2,5].map(function(mult){
+    var q = qty * mult, b = mult === 1 ? c : calc(q);
+    return {mult:mult, q:q, b:b};
+  });
+  $('breakBody').innerHTML = rows.map(function(r){
+    return '<tr class="'+(r.mult===1?'cur':'')+'"><td>'+r.mult+'× ('+(r.q>0?r.q:0)+' pcs)</td><td>'+money.format(r.b.mat)+'</td><td>'+money.format(r.b.mach)+'</td><td>'+money.format(r.b.fin)+'</td><td>'+money.format(r.b.mar)+'</td><td>'+money.format(r.b.total)+'</td><td class="pp">'+(r.q>0?money.format(r.b.per):'—')+'</td></tr>';
+  }).join('');
+
+  renderPrint(c, rows, mat);
+}
+
+function renderPrint(c, rows, mat){
+  var co = settings.company, qty = rfq.qty;
+  var valid = new Date(rfq.date.getTime()); valid.setDate(valid.getDate() + 30);
+  var opRows = OPS.filter(function(o){ return rfq.ops[o.id].on; }).map(function(o){
+    var st = rfq.ops[o.id];
+    return '<tr><td>'+esc(o.name)+'</td><td class="r">'+fmtMin(st.setup)+' min</td><td class="r">'+fmtMin(st.run)+' min</td></tr>';
+  }).join('') || '<tr><td colspan="3">No operations selected</td></tr>';
+  var contact = [co.addr, co.phone, co.email].filter(Boolean).map(esc).join('<br>');
+  var breaks = rows.map(function(r){
+    return '<tr><td>'+r.mult+'× — '+r.q+' pcs</td><td class="r">'+money.format(r.b.total)+'</td><td class="r">'+(r.q>0?money.format(r.b.per):'—')+'</td></tr>';
+  }).join('');
+  $('printDoc').innerHTML =
+    '<div class="pd-head"><div class="pd-shop"><h1>'+esc(co.name || 'Machine Shop')+'</h1><div>'+contact+'</div></div>' +
+    '<div class="pd-qt"><h2>QUOTATION</h2><div><b>Quote no.</b> '+esc(rfq.number)+'</div><div><b>Date</b> '+longDate(rfq.date)+'</div><div><b>Valid through</b> '+longDate(valid)+'</div></div></div>' +
+    '<div class="pd-info"><div class="pd-box"><h3>Prepared for</h3><p><b>'+esc(rfq.customer || 'Customer')+'</b></p></div>' +
+    '<div class="pd-box"><h3>Part</h3><p><b>'+esc(rfq.part || 'Part description not entered')+'</b></p><p>Material: '+esc(mat.name)+' · Quantity: '+qty+' pcs</p></div></div>' +
+    '<div class="pd-h">Scope of work</div><table><thead><tr><th>Operation</th><th class="r">Setup (per lot)</th><th class="r">Run (per part)</th></tr></thead><tbody>'+opRows+'</tbody></table>' +
+    '<div class="pd-h">Pricing</div><table><tbody>' +
+    '<tr><td>Material</td><td class="r">'+money.format(c.mat)+'</td></tr>' +
+    '<tr><td>Machining</td><td class="r">'+money.format(c.mach)+'</td></tr>' +
+    '<tr><td>Finishing</td><td class="r">'+money.format(c.fin)+'</td></tr>' +
+    '<tr><td>Overhead &amp; profit</td><td class="r">'+money.format(c.mar)+'</td></tr>' +
+    '<tr class="tot"><td>Total for '+qty+' pcs</td><td class="r">'+money.format(c.total)+'</td></tr>' +
+    '<tr><td>Price per part</td><td class="r"><b>'+(qty>0?money.format(c.per):'—')+'</b></td></tr></tbody></table>' +
+    '<div class="pd-h">Quantity breaks</div><table><thead><tr><th>Quantity</th><th class="r">Total</th><th class="r">Per part</th></tr></thead><tbody>'+breaks+'</tbody></table>' +
+    '<div class="pd-terms"><p><b>This quote is valid for 30 days</b>, through '+longDate(valid)+'.</p><p>'+esc(settings.terms)+'</p></div>' +
+    '<div class="pd-sign"><div>Authorized by ('+esc(co.name || 'shop')+')</div><div>Accepted by (customer)</div><div>Date</div></div>';
+}
+
+/* ---------- events ---------- */
+function toast(msg){
+  var t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(function(){ t.classList.remove('show'); }, 3600);
+}
+function bind(){
+  $('customer').addEventListener('input', function(e){ rfq.customer = e.target.value; render(); });
+  $('part').addEventListener('input', function(e){ rfq.part = e.target.value; render(); });
+  $('material').addEventListener('change', function(e){ rfq.material = e.target.value; $('price').value = settings.prices[rfq.material]; render(); });
+  $('price').addEventListener('input', function(e){ settings.prices[rfq.material] = num(e.target.value); saveSettings(); render(); });
+  $('qty').addEventListener('input', function(e){ rfq.qty = Math.floor(num(e.target.value)); render(); });
+  $('weight').addEventListener('input', function(e){ rfq.weight = num(e.target.value); render(); });
+
+  $('ops').addEventListener('input', function(e){
+    var t = e.target, id = t.getAttribute('data-op'); if(!id) return;
+    var f = t.getAttribute('data-f');
+    if(f === 'on') rfq.ops[id].on = t.checked; else rfq.ops[id][f] = num(t.value);
+    render();
+  });
+
+  [['shopRate','shopRate'],['finRate','finRate'],['markup','markup'],['margin','margin']].forEach(function(p){
+    $(p[0]).addEventListener('input', function(e){ settings[p[1]] = num(e.target.value); saveSettings(); render(); });
+  });
+  [['coName','name'],['coPhone','phone'],['coEmail','email'],['coAddr','addr']].forEach(function(p){
+    $(p[0]).addEventListener('input', function(e){ settings.company[p[1]] = e.target.value; saveSettings(); render(); });
+  });
+  $('coTerms').addEventListener('input', function(e){ settings.terms = e.target.value; saveSettings(); render(); });
+
+  $('exA').addEventListener('click', function(){ rfq = fromExample(EXAMPLES.a); syncForm(); render(); toast('Loaded example: 100 pcs 6061 aluminum brackets'); });
+  $('exB').addEventListener('click', function(){ rfq = fromExample(EXAMPLES.b); syncForm(); render(); toast('Loaded example: 25 pcs 4140 steel shafts'); });
+  $('btnNew').addEventListener('click', function(){ rfq = blankRfq(); syncForm(); render(); window.scrollTo({top:0}); $('customer').focus(); toast('New blank quote ' + rfq.number); });
+  $('btnReset').addEventListener('click', function(){
+    settings = clone(DEFAULT_SETTINGS);
+    MATERIALS.forEach(function(m){ settings.prices[m.id] = m.price; });
+    saveSettings(); syncSettings(); syncForm(); render();
+    toast('Shop settings restored to defaults');
+  });
+
+  function download(){
+    var c = calc(rfq.qty);
+    if(!(rfq.qty > 0) || c.total <= 0){ toast('Enter a quantity and at least a material weight or one operation before downloading.'); return; }
+    var old = document.title;
+    document.title = rfq.number + ' - ' + (settings.company.name || 'Quote');
+    window.addEventListener('afterprint', function restore(){ document.title = old; window.removeEventListener('afterprint', restore); });
+    window.print();
+  }
+  $('btnPdf').addEventListener('click', download);
+  $('btnPdfTop').addEventListener('click', download);
+}
+
+buildStatic();
+syncSettings();
+rfq = fromExample(EXAMPLES.a);
+syncForm();
+bind();
+render();
+})();
+</script>
+</body>
+</html>
